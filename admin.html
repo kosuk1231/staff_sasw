@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>명단 관리 · 내빈 의전 시스템</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;900&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg-deep:#08080c;--bg-base:#0e0e14;--bg-surface:#16161f;--bg-card:#1c1c28;--bg-card-hover:#24242f;--bg-elevated:#2a2a38;--gold:#c9a84c;--gold-light:#e8d48b;--gold-dim:#8a7633;--gold-glow:rgba(201,168,76,.15);--gold-glow-strong:rgba(201,168,76,.3);--text-primary:#f0ede6;--text-secondary:#918d84;--text-muted:#5c5950;--text-inverse:#08080c;--status-enter:#5b9cf5;--status-seat:#5ce0a0;--status-warn:#f5a623;--status-urgent:#ef4444;--radius-sm:6px;--radius-md:10px;--radius-lg:16px;--shadow-elevated:0 8px 32px rgba(0,0,0,.4);--shadow-gold:0 0 20px rgba(201,168,76,.2);--transition:.2s cubic-bezier(.4,0,.2,1)}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{min-height:100%;font-family:'Noto Sans KR',sans-serif;background:radial-gradient(ellipse 60% 40% at 50% 0%,rgba(201,168,76,.05),transparent 60%),var(--bg-deep);color:var(--text-primary);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--gold-dim);border-radius:4px}
+.wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+.page-header{text-align:center;margin-bottom:28px}
+.page-header .logo-line{font-family:'Playfair Display',serif;font-size:13px;color:var(--gold);letter-spacing:5px;text-transform:uppercase;margin-bottom:10px}
+.page-header h1{font-size:26px;font-weight:700}
+.page-header .divider{width:42px;height:1px;background:var(--gold);margin:16px auto 0}
+.conn{display:flex;align-items:center;justify-content:center;gap:7px;font-size:12px;color:var(--text-muted);margin-top:14px}
+.conn .dot{width:7px;height:7px;border-radius:50%;background:var(--status-seat);animation:pulse 2s infinite}.conn .dot.off{background:var(--status-urgent);animation:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.card{background:var(--bg-card);border:1px solid rgba(201,168,76,.12);border-radius:var(--radius-lg);padding:24px 26px;margin-bottom:18px}
+.card h2{font-size:16px;font-weight:600;color:var(--gold);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.card .desc{font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:18px}
+.btn{padding:11px 20px;font-size:14px;font-weight:600;border-radius:var(--radius-md);cursor:pointer;font-family:inherit;border:1px solid transparent;transition:var(--transition);display:inline-flex;align-items:center;gap:7px}
+.btn-gold{background:var(--gold);color:var(--text-inverse)}.btn-gold:hover{background:var(--gold-light)}
+.btn-gold:disabled{opacity:.4;cursor:not-allowed}
+.btn-ghost{background:var(--bg-elevated);color:var(--text-secondary);border-color:rgba(255,255,255,.08)}.btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
+.btn-danger{background:var(--status-urgent);color:#fff}.btn-danger:hover{opacity:.88}
+.file-zone{border:1.5px dashed rgba(201,168,76,.3);border-radius:var(--radius-md);padding:28px;text-align:center;cursor:pointer;transition:var(--transition);background:var(--bg-surface)}
+.file-zone:hover{border-color:var(--gold);background:var(--bg-card-hover)}
+.file-zone .fz-icon{font-size:30px;margin-bottom:8px}
+.file-zone .fz-main{font-size:14px;font-weight:600;margin-bottom:4px}
+.file-zone .fz-sub{font-size:11px;color:var(--text-muted)}
+.file-zone.has-file{border-color:var(--status-seat);border-style:solid}
+#fileInput{display:none}
+.preview{margin-top:16px;display:none}
+.preview.show{display:block}
+.prev-stat{font-size:13px;color:var(--text-primary);margin-bottom:12px}
+.prev-stat b{color:var(--gold)}
+.map-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.map-chip{font-size:11px;padding:4px 10px;border-radius:20px;background:var(--gold-glow);color:var(--gold-light);border:1px solid rgba(201,168,76,.2)}
+.map-chip.ignored{background:rgba(255,255,255,.04);color:var(--text-muted);border-color:rgba(255,255,255,.06)}
+.prev-table{width:100%;font-size:11px;border-collapse:collapse;margin-bottom:16px;overflow:hidden;border-radius:var(--radius-sm)}
+.prev-table th{background:var(--bg-elevated);color:var(--gold-dim);padding:6px 8px;text-align:left;font-weight:600;white-space:nowrap}
+.prev-table td{padding:5px 8px;border-top:1px solid rgba(255,255,255,.04);color:var(--text-secondary);white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}
+.mode-row{display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+.mode-item{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--text-secondary);cursor:pointer}
+.mode-item input[type=radio]{accent-color:var(--gold);width:16px;height:16px;cursor:pointer}
+.mode-item .m-danger{color:var(--status-urgent);font-weight:600}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap}
+.result-box{margin-top:14px;font-size:13px;padding:12px 14px;border-radius:var(--radius-md);display:none;line-height:1.6;white-space:pre-wrap}
+.result-box.show{display:block}
+.result-box.ok{background:rgba(92,224,160,.1);color:var(--status-seat);border:1px solid rgba(92,224,160,.3)}
+.result-box.err{background:rgba(239,68,68,.1);color:#fca5a5;border:1px solid rgba(239,68,68,.3)}
+.count-line{font-size:13px;color:var(--text-secondary);margin-bottom:16px}.count-line b{color:var(--gold);font-size:16px}
+.hint{font-size:11px;color:var(--text-muted);line-height:1.6;margin-top:10px}
+.toast-container{position:fixed;top:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast{padding:12px 20px;background:var(--bg-elevated);border:1px solid var(--gold-dim);border-radius:var(--radius-md);color:var(--text-primary);font-size:14px;box-shadow:var(--shadow-elevated);animation:tin .3s ease;max-width:320px}
+.toast.error{border-color:#e05050}@keyframes tin{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+.nav-back{display:inline-block;font-size:12px;color:var(--text-muted);text-decoration:none;margin-bottom:18px;border:1px solid var(--text-muted);padding:6px 14px;border-radius:var(--radius-sm);transition:var(--transition)}
+.nav-back:hover{border-color:var(--gold);color:var(--gold)}
+</style>
+</head>
+<body>
+<div class="toast-container" id="toastContainer"></div>
+<div class="wrap">
+  <a class="nav-back" href="index.html">← 의전 시스템으로</a>
+  <div class="page-header">
+    <div class="logo-line">Guest List Manager</div>
+    <h1>내빈 명단 관리</h1>
+    <div class="divider"></div>
+    <div class="conn"><span class="dot" id="connDot"></span><span id="connText">연결 확인 중...</span></div>
+  </div>
+
+  <!-- 불러오기 -->
+  <div class="card">
+    <h2>📥 명단 불러오기</h2>
+    <div class="desc">기존 구글시트의 <b>CSV 또는 Excel(.xlsx)</b> 파일을 올리면 한글 컬럼을 자동으로 인식해 등록합니다. 첫 행이 머리글(내빈ID·우선순위·구분·성함·소속·직함·연락처·이메일·지정좌석·비고·소개완료·사진)이어야 합니다.</div>
+    <label class="file-zone" id="fileZone" for="fileInput">
+      <div class="fz-icon">📄</div>
+      <div class="fz-main" id="fzMain">파일 선택 또는 여기로 끌어다 놓기</div>
+      <div class="fz-sub">CSV · XLSX 지원</div>
+    </label>
+    <input type="file" id="fileInput" accept=".csv,.xlsx,.xls">
+
+    <div class="preview" id="preview">
+      <div class="prev-stat" id="prevStat"></div>
+      <div class="map-grid" id="mapGrid"></div>
+      <table class="prev-table" id="prevTable"></table>
+      <div class="mode-row">
+        <label class="mode-item"><input type="radio" name="mode" value="append" checked> 기존 명단에 <b>추가</b></label>
+        <label class="mode-item"><input type="radio" name="mode" value="replace"> <span class="m-danger">전체 교체</span> (기존 명단 삭제 후 등록)</label>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-gold" id="importBtn" onclick="runImport()">명단 등록 실행</button>
+        <button class="btn btn-ghost" onclick="clearFile()">취소</button>
+      </div>
+      <div class="result-box" id="importResult"></div>
+    </div>
+  </div>
+
+  <!-- 내려받기 -->
+  <div class="card">
+    <h2>📤 명단 내려받기</h2>
+    <div class="count-line">현재 등록된 내빈: <b id="guestCount">–</b>명</div>
+    <div class="desc">현재 명단을 입장시간·착석좌석·소개완료 상태까지 포함해 Excel로 내려받습니다. 행사 후 기록 보관이나 정산에 쓰세요.</div>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="exportList()">현재 명단 다운로드 (.xlsx)</button>
+      <button class="btn btn-ghost" onclick="downloadTemplate()">빈 양식 다운로드</button>
+    </div>
+    <div class="hint">빈 양식은 머리글과 예시 1행만 들어있습니다. 여기에 명단을 채워 다시 "불러오기"로 올리면 됩니다.</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+  const SUPABASE_URL      = 'https://lzfsowysybisuisaasoa.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_Na6u1HFFeoSrEkw_NTSytw_cZmIrcHi';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+</script>
+<script>
+// ── 한글 머리글 → DB 컬럼 매핑 (별칭 허용) ──
+var COLMAP = {
+  '내빈id':'guest_code','내빈ID':'guest_code','코드':'guest_code','id':'guest_code',
+  '우선순위':'priority','순위':'priority',
+  '구분':'category',
+  '성함':'name','이름':'name',
+  '소속':'org','기관':'org','단체':'org',
+  '직함':'title','직책':'title',
+  '연락처':'phone','전화':'phone','휴대폰':'phone','핸드폰':'phone',
+  '이메일':'email','메일':'email','email':'email',
+  '상태':'status',
+  '지정좌석':'assigned_seat','지정석':'assigned_seat',
+  '비고':'note','메모':'note',
+  '소개완료':'introduced',
+  '사진':'photo_url','사진url':'photo_url','photo_url':'photo_url','사진링크':'photo_url'
+};
+// import 시 무시할 운영 전용 컬럼 (앱에서 자동 생성)
+var IGNORE = {'실제좌석':1,'실제석':1,'입장시간':1,'착석시간':1};
+var VALID_STATUS = {'대기':1,'입장':1,'착석':1,'불참':1};
+
+var parsedRows=[];
+
+// ── 연결 확인 + 카운트 ──
+async function refreshCount(){
+  try{
+    var r=await sb.from('guests').select('*',{count:'exact',head:true});
+    if(r.error) throw r.error;
+    document.getElementById('connDot').classList.remove('off');
+    document.getElementById('connText').textContent='Supabase 연결 정상';
+    document.getElementById('guestCount').textContent=(r.count||0);
+  }catch(e){
+    document.getElementById('connDot').classList.add('off');
+    document.getElementById('connText').textContent='연결 오류: '+(e.message||e);
+    document.getElementById('guestCount').textContent='–';
+  }
+}
+
+// ── 파일 파싱 ──
+document.getElementById('fileInput').addEventListener('change',function(e){
+  var f=e.target.files[0]; if(!f) return;
+  document.getElementById('fzMain').textContent=f.name;
+  document.getElementById('fileZone').classList.add('has-file');
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    try{
+      var wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      parsedRows=rows;
+      showPreview(rows);
+    }catch(err){ showToast('파일을 읽지 못했습니다: '+err.message,true); }
+  };
+  reader.readAsArrayBuffer(f);
+});
+
+function showPreview(rows){
+  var prev=document.getElementById('preview');
+  if(!rows.length){ showToast('빈 파일입니다',true); return; }
+  var headers=Object.keys(rows[0]);
+
+  // 매핑 칩
+  var grid=document.getElementById('mapGrid'); grid.innerHTML='';
+  headers.forEach(function(h){
+    var key=String(h).trim();
+    var col=COLMAP[key]||COLMAP[key.toLowerCase()];
+    var chip=document.createElement('span');
+    if(col){ chip.className='map-chip'; chip.textContent=key+' → '+col; }
+    else if(IGNORE[key]){ chip.className='map-chip ignored'; chip.textContent=key+' (운영 자동)'; }
+    else { chip.className='map-chip ignored'; chip.textContent=key+' (무시)'; }
+    grid.appendChild(chip);
+  });
+
+  // 유효 행 수
+  var valid=rows.map(rowToGuest).filter(Boolean);
+  document.getElementById('prevStat').innerHTML='총 <b>'+rows.length+'</b>행 중 등록 가능 <b>'+valid.length+'</b>명 (성함 없는 행 제외)';
+
+  // 샘플 3행
+  var tb=document.getElementById('prevTable');
+  var cols=['성함','소속','직함','지정좌석','우선순위'];
+  var th='<tr>'+cols.map(function(c){return '<th>'+c+'</th>';}).join('')+'</tr>';
+  var body=valid.slice(0,3).map(function(g){
+    return '<tr><td>'+(g.name||'')+'</td><td>'+(g.org||'')+'</td><td>'+(g.title||'')+'</td><td>'+(g.assigned_seat||'')+'</td><td>'+(g.priority)+'</td></tr>';
+  }).join('');
+  tb.innerHTML=th+body;
+
+  document.getElementById('importResult').className='result-box';
+  prev.classList.add('show');
+}
+
+function rowToGuest(obj){
+  var g={};
+  Object.keys(obj).forEach(function(k){
+    var key=String(k).trim();
+    var col=COLMAP[key]||COLMAP[key.toLowerCase()];
+    if(!col) return;
+    var v=obj[k];
+    if(col==='priority'){ g.priority=(v===''||v==null)?999:Number(v); if(isNaN(g.priority))g.priority=999; }
+    else if(col==='introduced'){ var s=String(v).trim(); g.introduced=(s==='✓'||s==='O'||s==='o'||s==='완료'||s==='TRUE'||s==='true'||v===true); }
+    else if(col==='status'){ var st=String(v).trim(); g.status=VALID_STATUS[st]?st:'대기'; }
+    else { g[col]=String(v==null?'':v).trim(); }
+  });
+  if(!g.name) return null;
+  if(g.priority==null||g.priority===undefined) g.priority=999;
+  if(!g.status) g.status='대기';
+  if(g.introduced===undefined) g.introduced=false;
+  return g;
+}
+
+// ── 등록 실행 ──
+async function runImport(){
+  var valid=parsedRows.map(rowToGuest).filter(Boolean);
+  if(!valid.length){ showToast('등록할 행이 없습니다',true); return; }
+  var mode=document.querySelector('input[name=mode]:checked').value;
+
+  if(mode==='replace'){
+    if(!confirm('기존 내빈 명단을 모두 삭제하고 새로 '+valid.length+'명을 등록합니다.\n착석 정보도 함께 초기화됩니다. 계속할까요?')) return;
+  }
+
+  var btn=document.getElementById('importBtn');
+  btn.disabled=true; btn.textContent='등록 중...';
+  var box=document.getElementById('importResult');
+
+  try{
+    if(mode==='replace'){
+      var del=await sb.from('guests').delete().not('id','is',null);
+      if(del.error) throw del.error;
+    }
+    // 배치 삽입
+    var ins=await sb.from('guests').insert(valid);
+    if(ins.error) throw ins.error;
+
+    box.className='result-box ok show';
+    box.textContent='✅ '+valid.length+'명 등록 완료'+(mode==='replace'?' (전체 교체)':' (추가)');
+    showToast(valid.length+'명 등록 완료');
+    refreshCount();
+    clearFile();
+  }catch(e){
+    box.className='result-box err show';
+    box.textContent='❌ 등록 실패: '+(e.message||e);
+    showToast('등록 실패',true);
+  }finally{
+    btn.disabled=false; btn.textContent='명단 등록 실행';
+  }
+}
+
+function clearFile(){
+  parsedRows=[];
+  document.getElementById('fileInput').value='';
+  document.getElementById('fzMain').textContent='파일 선택 또는 여기로 끌어다 놓기';
+  document.getElementById('fileZone').classList.remove('has-file');
+  document.getElementById('preview').classList.remove('show');
+}
+
+// ── 내려받기 ──
+function fmtTime(v){ if(!v) return ''; var d=new Date(v); if(isNaN(d.getTime()))return ''; return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function todayStr(){ var n=new Date(); return n.getFullYear()+''+String(n.getMonth()+1).padStart(2,'0')+String(n.getDate()).padStart(2,'0'); }
+
+async function exportList(){
+  try{
+    var r=await sb.from('guests').select('*').order('priority',{ascending:true});
+    if(r.error) throw r.error;
+    var rows=(r.data||[]).map(function(g){
+      return {
+        '내빈ID':g.guest_code||'', '우선순위':g.priority, '구분':g.category||'',
+        '성함':g.name||'', '소속':g.org||'', '직함':g.title||'',
+        '연락처':g.phone||'', '이메일':g.email||'', '상태':g.status||'',
+        '지정좌석':g.assigned_seat||'', '실제좌석':g.actual_seat||'',
+        '입장시간':fmtTime(g.entered_at), '착석시간':fmtTime(g.seated_at),
+        '비고':g.note||'', '소개완료':g.introduced?'✓':'', '사진':g.photo_url||''
+      };
+    });
+    if(!rows.length){ showToast('내려받을 명단이 없습니다',true); return; }
+    var ws=XLSX.utils.json_to_sheet(rows);
+    var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'내빈명단');
+    XLSX.writeFile(wb,'내빈명단_'+todayStr()+'.xlsx');
+    showToast(rows.length+'명 다운로드');
+  }catch(e){ showToast('다운로드 실패: '+(e.message||e),true); }
+}
+
+function downloadTemplate(){
+  var rows=[{
+    '내빈ID':'V01','우선순위':1,'구분':'주요내빈','성함':'홍길동','소속':'서울특별시',
+    '직함':'시장','연락처':'010-0000-0000','이메일':'','상태':'대기',
+    '지정좌석':'3-1','비고':'','소개완료':'','사진':''
+  }];
+  var ws=XLSX.utils.json_to_sheet(rows);
+  var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'내빈명단');
+  XLSX.writeFile(wb,'내빈명단_양식.xlsx');
+}
+
+// ── 토스트 ──
+function showToast(m,e){var c=document.getElementById('toastContainer'),t=document.createElement('div');t.className='toast'+(e?' error':'');t.textContent=m;c.appendChild(t);setTimeout(function(){t.remove();},3000);}
+
+// 드래그앤드롭
+var fz=document.getElementById('fileZone');
+['dragover','dragenter'].forEach(function(ev){fz.addEventListener(ev,function(e){e.preventDefault();fz.classList.add('has-file');});});
+fz.addEventListener('drop',function(e){e.preventDefault();var f=e.dataTransfer.files[0];if(f){document.getElementById('fileInput').files=e.dataTransfer.files;document.getElementById('fileInput').dispatchEvent(new Event('change'));}});
+
+refreshCount();
+</script>
+</body>
+</html>
