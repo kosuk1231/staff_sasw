@@ -86,6 +86,14 @@ html,body{height:100%;width:100%;font-family:'Noto Sans KR',sans-serif;backgroun
 .loading-state{display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);gap:10px}
 .spinner{width:24px;height:24px;border:2px solid var(--bg-elevated);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 @media(max-width:600px){.left{width:200px;min-width:160px}.map{grid-template-columns:repeat(auto-fill,minmax(92px,1fr))}}
+/* ── 명찰 인쇄 ── */
+#badgePrint{display:none}
+.badge-inner{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;color:#000;text-align:center;padding:3mm;box-sizing:border-box}
+.bp-event{font-size:9pt;color:#555;margin-bottom:1mm}
+.bp-name{font-size:30pt;font-weight:900;line-height:1.1;letter-spacing:1px}
+.bp-org{font-size:12pt;color:#222;margin-top:1.5mm;line-height:1.25}
+.bp-seat{font-size:13pt;font-weight:700;margin-top:2mm;padding:1mm 4mm;border:1.2pt solid #000;border-radius:3mm}
+@media print{ body > *{display:none !important;} #badgePrint{display:block !important;position:fixed;inset:0;width:100%;height:100%;background:#fff} }
 </style>
 </head>
 <body>
@@ -132,11 +140,25 @@ html,body{height:100%;width:100%;font-family:'Noto Sans KR',sans-serif;backgroun
   </div>
 </div>
 
+<!-- 명찰 인쇄 영역 -->
+<div id="badgePrint"><div class="badge-inner">
+  <div class="bp-event" id="bpEvent"></div>
+  <div class="bp-name" id="bpName"></div>
+  <div class="bp-org" id="bpOrg"></div>
+  <div class="bp-seat" id="bpSeat"></div>
+</div></div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
   const SUPABASE_URL      = 'https://lzfsowysybisuisaasoa.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_Na6u1HFFeoSrEkw_NTSytw_cZmIrcHi';
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  /* ── 명찰 설정 (checkin.html과 동일하게 맞추세요) ── */
+  const EVENT_NAME  = '서울특별시사회복지사협회';
+  const BADGE_W_MM  = 62;
+  const BADGE_H_MM  = 40;
+  const AUTO_PRINT  = true;  // 접수대 수동 체크인 시 명찰 자동 인쇄
 </script>
 <script>
 var attendees=[], selectedId=null, capacity=10, customTables=[], rtChannel=null, reloadTimer=null, openTableNo=null;
@@ -283,7 +305,23 @@ async function toggleCheck(id,cur){
   var patch=cur?{checked_in:false,checked_in_at:null}:{checked_in:true,checked_in_at:nowISO()};
   var r=await sb.from('attendees').update(patch).eq('id',id);
   if(r.error){showToast('오류: '+r.error.message,true);return;}
+  if(!cur && AUTO_PRINT){ var a=attendees.find(function(x){return x.id===id;}); if(a) printBadge(a); }
   loadData();
+}
+// ── 명찰 인쇄 ──
+function setBadgePage(){
+  var st=document.getElementById('badgePageStyle');
+  if(!st){ st=document.createElement('style'); st.id='badgePageStyle'; document.head.appendChild(st); }
+  st.textContent='@page{size:'+BADGE_W_MM+'mm '+BADGE_H_MM+'mm;margin:0}';
+}
+function printBadge(a){
+  if(!a) return;
+  setBadgePage();
+  document.getElementById('bpEvent').textContent=EVENT_NAME;
+  document.getElementById('bpName').textContent=a.name||'';
+  document.getElementById('bpOrg').textContent=a.org||'';
+  document.getElementById('bpSeat').textContent=a.table_no?('좌석 '+a.table_no):'';
+  window.print();
 }
 async function unassign(id){
   var a=attendees.find(function(x){return x.id===id;});
