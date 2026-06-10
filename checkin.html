@@ -75,6 +75,18 @@ html,body{height:100%;width:100%;font-family:'Noto Sans KR',sans-serif;backgroun
 .toast-container{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px}
 .toast{padding:12px 24px;background:var(--bg-elevated);border:1px solid var(--gold-dim);border-radius:var(--radius-md);font-size:15px;box-shadow:var(--shadow-elevated)}
 .toast.error{border-color:#e05050}
+/* ── 명찰 인쇄 (전용 라벨프린터) ── */
+#badgePrint{display:none}
+.badge-inner{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;color:#000;text-align:center;padding:3mm;box-sizing:border-box}
+.bp-event{font-size:9pt;color:#555;margin-bottom:1mm}
+.bp-name{font-size:30pt;font-weight:900;line-height:1.1;letter-spacing:1px}
+.bp-org{font-size:12pt;color:#222;margin-top:1.5mm;line-height:1.25}
+.bp-seat{font-size:13pt;font-weight:700;margin-top:2mm;padding:1mm 4mm;border:1.2pt solid #000;border-radius:3mm}
+.d-print{margin-top:14px;padding:14px 32px;font-size:16px;font-weight:700;border:1px solid var(--gold);background:var(--gold-glow);color:var(--gold-light);border-radius:999px;cursor:pointer;font-family:inherit}
+@media print{
+  body > *{display:none !important;}
+  #badgePrint{display:block !important;position:fixed;inset:0;width:100%;height:100%;background:#fff}
+}
 </style>
 </head>
 <body>
@@ -132,19 +144,50 @@ html,body{height:100%;width:100%;font-family:'Noto Sans KR',sans-serif;backgroun
   </div>
   <div class="d-msg">즐거운 시간 되세요 🎉</div>
   <div class="d-already" id="doneAlready"></div>
+  <button class="d-print" onclick="printBadge(lastDonePerson)">🖨 명찰 다시 인쇄</button>
   <button class="d-home" onclick="goHome()">처음으로</button>
   <div class="d-timer" id="doneTimer"></div>
 </div>
+
+<!-- 명찰 인쇄 영역 (화면엔 안 보이고 인쇄 시에만) -->
+<div id="badgePrint"><div class="badge-inner">
+  <div class="bp-event" id="bpEvent"></div>
+  <div class="bp-name" id="bpName"></div>
+  <div class="bp-org" id="bpOrg"></div>
+  <div class="bp-seat" id="bpSeat"></div>
+</div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
   const SUPABASE_URL      = 'https://lzfsowysybisuisaasoa.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_Na6u1HFFeoSrEkw_NTSytw_cZmIrcHi';
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  /* ── 명찰 설정 (라벨 규격에 맞춰 조정) ── */
+  const EVENT_NAME  = '서울특별시사회복지사협회';  // 명찰 상단 행사/기관명
+  const BADGE_W_MM  = 62;    // 라벨 가로(mm) — 사용하는 롤 라벨 폭
+  const BADGE_H_MM  = 40;    // 라벨 세로(mm)
+  const AUTO_PRINT  = true;  // 체크인 완료 시 명찰 자동 인쇄 (false면 버튼으로만)
 </script>
 <script>
-var searchTimer=null, doneTimer=null, idleTimer=null, selected=null;
+var searchTimer=null, doneTimer=null, idleTimer=null, selected=null, lastDonePerson=null;
 var input=document.getElementById('searchInput');
+
+// ── 명찰 인쇄 ──
+function setBadgePage(){
+  var st=document.getElementById('badgePageStyle');
+  if(!st){ st=document.createElement('style'); st.id='badgePageStyle'; document.head.appendChild(st); }
+  st.textContent='@page{size:'+BADGE_W_MM+'mm '+BADGE_H_MM+'mm;margin:0}';
+}
+function printBadge(a){
+  if(!a) return;
+  setBadgePage();
+  document.getElementById('bpEvent').textContent=EVENT_NAME;
+  document.getElementById('bpName').textContent=a.name||'';
+  document.getElementById('bpOrg').textContent=a.org||'';
+  document.getElementById('bpSeat').textContent=a.table_no?('좌석 '+a.table_no):'';
+  window.print();
+}
 
 // ── 입력 ──
 input.addEventListener('input',onInput);
@@ -240,6 +283,8 @@ function showDone(a, already){
   document.getElementById('doneAlready').textContent=already?'(이미 체크인된 분입니다)':'';
   document.getElementById('doneScreen').classList.add('show');
   refreshCounter();
+  lastDonePerson=a;
+  if(AUTO_PRINT) setTimeout(function(){ printBadge(a); },450);
   // 8초 카운트다운 후 자동 복귀
   var left=8;
   document.getElementById('doneTimer').textContent=left+'초 후 처음 화면으로';
