@@ -328,6 +328,17 @@ function showToast(m,e){var c=document.getElementById('toastContainer'),t=docume
 refreshCounter();
 setInterval(refreshCounter,30000);
 input.focus();
+
+// 운영자용 숨은 출구: 좌측 상단 'SELF CHECK-IN' 로고를 0.9초 길게 누르면 메인으로
+(function(){
+  var el=document.querySelector('.brand'); if(!el) return;
+  el.style.cursor='pointer'; el.title='길게 눌러 메인 화면으로 (운영자용)';
+  var t=null;
+  function start(){ t=setTimeout(function(){ location.href='index.html'; },900); }
+  function cancel(){ clearTimeout(t); }
+  el.addEventListener('mousedown',start); el.addEventListener('mouseup',cancel); el.addEventListener('mouseleave',cancel);
+  el.addEventListener('touchstart',function(){start();},{passive:true}); el.addEventListener('touchend',cancel); el.addEventListener('touchcancel',cancel);
+})();
 </script>
 </body>
 </html>
