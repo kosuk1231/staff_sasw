@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>참석자 체크인 · 자리배치</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;900&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg-deep:#08080c;--bg-base:#0e0e14;--bg-surface:#16161f;--bg-card:#1c1c28;--bg-card-hover:#24242f;--bg-elevated:#2a2a38;--gold:#c9a84c;--gold-light:#e8d48b;--gold-dim:#8a7633;--gold-glow:rgba(201,168,76,.15);--gold-glow-strong:rgba(201,168,76,.3);--text-primary:#f0ede6;--text-secondary:#918d84;--text-muted:#5c5950;--text-inverse:#08080c;--status-wait:#5c5950;--status-enter:#5b9cf5;--status-seat:#5ce0a0;--status-seat-bg:rgba(92,224,160,.12);--status-warn:#f5a623;--status-warn-bg:rgba(245,166,35,.12);--status-urgent:#ef4444;--radius-sm:6px;--radius-md:10px;--radius-lg:16px;--shadow-elevated:0 8px 32px rgba(0,0,0,.4);--shadow-gold:0 0 20px rgba(201,168,76,.2);--transition:.2s cubic-bezier(.4,0,.2,1)}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;width:100%;font-family:'Noto Sans KR',sans-serif;background:var(--bg-deep);color:var(--text-primary);overflow:hidden;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:var(--gold-dim);border-radius:4px}
+.app{height:100%;display:flex;flex-direction:column}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:var(--bg-surface);border-bottom:1px solid rgba(201,168,76,.1);min-height:56px;flex-shrink:0}
+.app-header .back-btn{background:none;border:1px solid var(--text-muted);color:var(--text-secondary);font-size:13px;padding:6px 14px;border-radius:var(--radius-sm);cursor:pointer;font-family:inherit;text-decoration:none;transition:var(--transition)}
+.app-header .back-btn:hover{border-color:var(--gold);color:var(--gold)}
+.app-header .title-area{text-align:center}.app-header .title-area h2{font-size:16px;font-weight:600;color:var(--gold)}.app-header .title-area .subtitle{font-size:11px;color:var(--text-muted);margin-top:2px}
+.app-header .status-badge{font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:6px}
+.app-header .dot{width:6px;height:6px;border-radius:50%;background:var(--status-seat);animation:pulse 2s infinite}.app-header .dot.off{background:var(--status-urgent);animation:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.stats-bar{padding:8px 20px;background:var(--bg-base);flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px;color:var(--text-secondary);display:flex;gap:18px;flex-wrap:wrap;align-items:center}
+.stats-bar .sb-num{font-weight:700}
+.toolbar{display:flex;align-items:center;gap:10px;padding:10px 20px;background:var(--bg-base);border-bottom:1px solid rgba(255,255,255,.04);flex-shrink:0;flex-wrap:wrap}
+.toolbar label{font-size:12px;color:var(--text-muted)}
+.toolbar input[type=number]{width:60px;padding:6px 8px;background:var(--bg-surface);border:1px solid rgba(255,255,255,.08);border-radius:var(--radius-sm);color:var(--text-primary);font-family:inherit;font-size:13px;outline:none}
+.tbtn{padding:8px 14px;font-size:12px;font-weight:600;background:var(--bg-surface);color:var(--text-secondary);border:1px solid rgba(255,255,255,.08);border-radius:var(--radius-sm);cursor:pointer;font-family:inherit;transition:var(--transition)}
+.tbtn:hover{border-color:var(--gold);color:var(--gold)}
+.body{flex:1;display:flex;overflow:hidden}
+/* 좌측 미배정 */
+.left{width:320px;min-width:260px;display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,.06);background:var(--bg-base)}
+.left-header{padding:12px 16px;font-size:13px;font-weight:600;color:var(--gold);border-bottom:1px solid rgba(255,255,255,.04);display:flex;justify-content:space-between;align-items:center}
+.search-box{padding:10px 14px;flex-shrink:0}
+.search-box input{width:100%;padding:9px 12px;background:var(--bg-surface);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius-md);color:var(--text-primary);font-size:14px;font-family:inherit;outline:none}
+.search-box input:focus{border-color:var(--gold-dim)}
+.unassigned-list{flex:1;overflow-y:auto;padding:4px 12px 12px}
+.ua-item{padding:11px 14px;border-radius:var(--radius-md);cursor:pointer;margin-bottom:6px;border:1px solid transparent;background:var(--bg-card);transition:var(--transition)}
+.ua-item:hover{background:var(--bg-card-hover)}
+.ua-item.selected{background:var(--gold-glow-strong);border-color:var(--gold-dim)}
+.ua-name{font-size:15px;font-weight:600}.ua-meta{font-size:11px;color:var(--text-secondary);margin-top:2px}
+.ua-checked{font-size:10px;color:var(--status-seat);font-weight:600}
+.ua-empty{text-align:center;color:var(--text-muted);padding:30px 16px;font-size:13px;line-height:1.6}
+/* 우측 테이블 맵 */
+.right{flex:1;display:flex;flex-direction:column;background:radial-gradient(ellipse 80% 40% at 50% 0%,rgba(201,168,76,.03),transparent 50%),var(--bg-deep)}
+.right-hint{padding:8px 20px;font-size:12px;color:var(--gold-dim);flex-shrink:0;text-align:center;min-height:32px}
+.map{flex:1;overflow-y:auto;padding:16px 24px 30px;display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:14px;align-content:start}
+.tcard{aspect-ratio:1;border-radius:50%;background:var(--bg-card);border:3px solid rgba(255,255,255,.07);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:var(--transition);position:relative;padding:8px}
+.tcard:hover{transform:scale(1.04);box-shadow:var(--shadow-gold)}
+.tcard .t-no{font-size:20px;font-weight:700}
+.tcard .t-cap{font-size:12px;color:var(--text-secondary);margin-top:2px}
+.tcard .t-chk{font-size:11px;font-weight:600;margin-top:1px}
+.tcard.empty{border-color:rgba(255,255,255,.07)}
+.tcard.empty .t-no{color:var(--text-muted)}
+.tcard.assigned{border-color:var(--gold-dim)}
+.tcard.assigned .t-chk{color:var(--gold-dim)}
+.tcard.partial{border-color:var(--status-warn);box-shadow:0 0 10px rgba(245,166,35,.2)}
+.tcard.partial .t-chk{color:var(--status-warn)}
+.tcard.full{border-color:var(--status-seat);box-shadow:0 0 12px rgba(92,224,160,.25)}
+.tcard.full .t-chk{color:var(--status-seat)}
+.tcard.over{border-color:var(--status-urgent)}
+.tcard.target{border-color:var(--gold)!important;background:var(--gold-glow)!important;box-shadow:var(--shadow-gold)}
+.tcard .t-full-tag{position:absolute;top:8px;right:10px;font-size:9px;color:var(--status-urgent);font-weight:700}
+.map-empty{grid-column:1/-1;text-align:center;color:var(--text-muted);padding:50px 20px;line-height:1.7}
+.map-empty .me-icon{font-size:40px;margin-bottom:12px}
+/* 모달 */
+.overlay{display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.65);backdrop-filter:blur(5px);align-items:center;justify-content:center;padding:20px}
+.overlay.show{display:flex}
+.modal{background:var(--bg-card);border:1px solid rgba(201,168,76,.2);border-radius:var(--radius-lg);width:100%;max-width:440px;max-height:82vh;display:flex;flex-direction:column;box-shadow:var(--shadow-elevated)}
+.modal-head{padding:20px 24px 14px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between}
+.modal-head h3{font-size:19px;font-weight:700;color:var(--gold)}
+.modal-head .m-sub{font-size:12px;color:var(--text-secondary);margin-top:3px}
+.modal-head .m-close{background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer}
+.modal-body{flex:1;overflow-y:auto;padding:12px 18px}
+.m-member{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:var(--radius-md);background:var(--bg-surface);margin-bottom:7px}
+.m-member .mm-left{flex:1;min-width:0}
+.m-member .mm-name{font-size:15px;font-weight:600}
+.m-member .mm-meta{font-size:11px;color:var(--text-secondary);margin-top:1px}
+.m-member .mm-chk-btn{padding:6px 12px;font-size:12px;font-weight:600;border-radius:20px;border:1px solid;cursor:pointer;font-family:inherit;background:none;white-space:nowrap}
+.m-member .mm-chk-btn.on{background:var(--status-seat-bg);color:var(--status-seat);border-color:rgba(92,224,160,.4)}
+.m-member .mm-chk-btn.off{color:var(--text-muted);border-color:rgba(255,255,255,.15)}
+.m-member .mm-remove{background:none;border:none;color:var(--status-urgent);font-size:12px;cursor:pointer;padding:4px;font-family:inherit}
+.m-empty{text-align:center;color:var(--text-muted);padding:24px;font-size:13px}
+.modal-foot{padding:12px 18px 16px;border-top:1px solid rgba(255,255,255,.06);font-size:12px;color:var(--text-muted);text-align:center}
+.toast-container{position:fixed;top:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast{padding:12px 20px;background:var(--bg-elevated);border:1px solid var(--gold-dim);border-radius:var(--radius-md);font-size:14px;box-shadow:var(--shadow-elevated);animation:tin .3s ease;max-width:320px}
+.toast.error{border-color:#e05050}@keyframes tin{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+.loading-state{display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);gap:10px}
+.spinner{width:24px;height:24px;border:2px solid var(--bg-elevated);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:600px){.left{width:200px;min-width:160px}.map{grid-template-columns:repeat(auto-fill,minmax(92px,1fr))}}
+</style>
+</head>
+<body>
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="app">
+  <div class="app-header">
+    <a class="back-btn" href="index.html">← 메인</a>
+    <div class="title-area"><h2>참석자 체크인 · 자리배치</h2><div class="subtitle" id="subtitle">테이블을 눌러 배정·체크인하세요</div></div>
+    <div class="status-badge"><span class="dot" id="connDot"></span>실시간</div>
+  </div>
+
+  <div class="stats-bar" id="statsBar"></div>
+
+  <div class="toolbar">
+    <label>테이블 정원</label>
+    <input type="number" id="capInput" value="10" min="1" max="30" onchange="setCapacity()">
+    <button class="tbtn" onclick="addTable()">＋ 테이블 추가</button>
+    <span style="font-size:11px;color:var(--text-muted)">색: 회색=빈 / 골드=배정 / 노랑=일부체크인 / 초록=전원체크인</span>
+  </div>
+
+  <div class="body">
+    <div class="left">
+      <div class="left-header"><span>미배정 참석자</span><span id="unassignedCount" style="color:var(--text-muted);font-weight:400">0명</span></div>
+      <div class="search-box"><input type="text" id="searchInput" placeholder="이름 또는 뒷자리 검색..." oninput="renderUnassigned()"></div>
+      <div class="unassigned-list" id="unassignedList"><div class="loading-state"><div class="spinner"></div></div></div>
+    </div>
+    <div class="right">
+      <div class="right-hint" id="rightHint"></div>
+      <div class="map" id="map"><div class="loading-state"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 테이블 상세 모달 -->
+<div class="overlay" id="tableModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div><h3 id="mtTitle"></h3><div class="m-sub" id="mtSub"></div></div>
+      <button class="m-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="mtBody"></div>
+    <div class="modal-foot">참석자를 다른 테이블로 옮기려면 "빼기" 후 좌측에서 다시 배정하세요</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL      = 'https://lzfsowysybisuisaasoa.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_Na6u1HFFeoSrEkw_NTSytw_cZmIrcHi';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+</script>
+<script>
+var attendees=[], selectedId=null, capacity=10, customTables=[], rtChannel=null, reloadTimer=null, openTableNo=null;
+
+function nowISO(){return new Date().toISOString();}
+function digitsTail(p){var d=String(p||'').replace(/[^0-9]/g,'');return d.length>=4?'···'+d.slice(-4):'';}
+
+// ── 로드 ──
+async function loadData(){
+  try{
+    var r=await sb.from('attendees').select('*').order('seq',{ascending:true});
+    if(r.error) throw r.error;
+    attendees=r.data||[];
+    document.getElementById('connDot').classList.remove('off');
+    renderAll();
+  }catch(e){
+    document.getElementById('connDot').classList.add('off');
+    showToast('로드 실패: '+(e.message||e),true);
+  }
+}
+function scheduleReload(){clearTimeout(reloadTimer);reloadTimer=setTimeout(loadData,250);}
+function startRealtime(){
+  if(rtChannel) sb.removeChannel(rtChannel);
+  rtChannel=sb.channel('att-rt').on('postgres_changes',{event:'*',schema:'public',table:'attendees'},scheduleReload)
+    .subscribe(function(s){document.getElementById('connDot').classList.toggle('off',s!=='SUBSCRIBED');});
+}
+
+// ── 테이블 번호 집합 ──
+function tableNos(){
+  var set={};
+  attendees.forEach(function(a){var t=String(a.table_no||'').trim();if(t)set[t]=1;});
+  customTables.forEach(function(t){set[t]=1;});
+  var arr=Object.keys(set);
+  arr.sort(function(a,b){var na=Number(a),nb=Number(b);if(!isNaN(na)&&!isNaN(nb))return na-nb;return String(a).localeCompare(b,'ko');});
+  return arr;
+}
+function membersOf(t){return attendees.filter(function(a){return String(a.table_no||'').trim()===String(t);});}
+
+// ── 통계 ──
+function renderStats(){
+  var total=attendees.length;
+  var assigned=attendees.filter(function(a){return String(a.table_no||'').trim();}).length;
+  var checked=attendees.filter(function(a){return a.checked_in;}).length;
+  document.getElementById('statsBar').innerHTML=
+    '전체 <span class="sb-num" style="color:var(--gold)">'+total+'</span>명'
+    +'<span>체크인 <span class="sb-num" style="color:var(--status-seat)">'+checked+'</span></span>'
+    +'<span>미체크인 <span class="sb-num" style="color:var(--status-warn)">'+(total-checked)+'</span></span>'
+    +'<span>배정 <span class="sb-num" style="color:var(--status-enter)">'+assigned+'</span></span>'
+    +'<span>미배정 <span class="sb-num" style="color:var(--status-urgent)">'+(total-assigned)+'</span></span>';
+}
+
+function renderAll(){ renderStats(); renderUnassigned(); renderMap(); if(openTableNo!==null) renderModalBody(openTableNo); }
+
+// ── 미배정 목록 ──
+function renderUnassigned(){
+  var q=(document.getElementById('searchInput').value||'').trim().toLowerCase();
+  var digits=q.replace(/[^0-9]/g,'');
+  var name=q.replace(/[0-9\s-]/g,'');
+  var list=attendees.filter(function(a){return !String(a.table_no||'').trim();});
+  if(name) list=list.filter(function(a){return (a.name||'').toLowerCase().indexOf(name)>=0||(a.org||'').toLowerCase().indexOf(name)>=0;});
+  if(digits) list=list.filter(function(a){return String(a.phone||'').replace(/[^0-9]/g,'').indexOf(digits)>=0;});
+  document.getElementById('unassignedCount').textContent=list.length+'명';
+  var box=document.getElementById('unassignedList');
+  if(!list.length){ box.innerHTML='<div class="ua-empty">'+(q?'검색 결과 없음':'미배정 참석자가 없습니다 👍')+'</div>'; return; }
+  box.innerHTML=list.map(function(a){
+    var sel=selectedId===a.id?'selected':'';
+    var chk=a.checked_in?'<span class="ua-checked"> ✓체크인</span>':'';
+    var meta=[a.org,digitsTail(a.phone)].filter(Boolean).join(' · ');
+    return '<div class="ua-item '+sel+'" onclick="selectAtt('+a.id+')"><div class="ua-name">'+esc(a.name)+chk+'</div><div class="ua-meta">'+esc(meta)+'</div></div>';
+  }).join('');
+}
+function selectAtt(id){
+  selectedId=selectedId===id?null:id;
+  var a=attendees.find(function(x){return x.id===id;});
+  document.getElementById('subtitle').textContent=selectedId&&a?a.name+' 님을 배정할 테이블을 누르세요':'테이블을 눌러 배정·체크인하세요';
+  document.getElementById('rightHint').textContent=selectedId&&a?'▶ '+a.name+' 님 → 배정할 테이블을 선택하세요':'';
+  renderAll();
+}
+
+// ── 테이블 맵 ──
+function renderMap(){
+  var nos=tableNos();
+  var map=document.getElementById('map');
+  if(!nos.length){
+    map.innerHTML='<div class="map-empty"><div class="me-icon">🪑</div>아직 테이블이 없습니다.<br>좌측에서 참석자를 선택해 배정하거나,<br>상단 "＋ 테이블 추가"로 빈 테이블을 만드세요.</div>';
+    return;
+  }
+  var selA=selectedId?attendees.find(function(x){return x.id===selectedId;}):null;
+  map.innerHTML=nos.map(function(t){
+    var mem=membersOf(t), chk=mem.filter(function(m){return m.checked_in;}).length;
+    var cls='empty';
+    if(mem.length){ if(chk===0)cls='assigned'; else if(chk>=mem.length)cls='full'; else cls='partial'; }
+    if(mem.length>capacity) cls='over';
+    var target=selA?'target':'';
+    var fullTag=mem.length>=capacity?'<span class="t-full-tag">만석</span>':'';
+    return '<div class="tcard '+cls+' '+target+'" onclick="clickTable(\''+String(t).replace(/'/g,"\\'")+'\')">'
+      +fullTag
+      +'<div class="t-no">'+esc(t)+'</div>'
+      +'<div class="t-cap">'+mem.length+'/'+capacity+'</div>'
+      +'<div class="t-chk">✓ '+chk+'</div></div>';
+  }).join('');
+}
+
+function clickTable(t){
+  if(selectedId){
+    var mem=membersOf(t);
+    if(mem.length>=capacity){ if(!confirm(t+'번 테이블은 정원('+capacity+')이 찼습니다. 그래도 배정할까요?')) return; }
+    assignTable(selectedId,t);
+  }else{
+    openModal(t);
+  }
+}
+
+async function assignTable(id,t){
+  var a=attendees.find(function(x){return x.id===id;});
+  var r=await sb.from('attendees').update({table_no:String(t)}).eq('id',id);
+  if(r.error){showToast('배정 실패: '+r.error.message,true);return;}
+  showToast((a?a.name:'')+' → '+t+'번 테이블 배정');
+  selectedId=null;
+  document.getElementById('subtitle').textContent='테이블을 눌러 배정·체크인하세요';
+  document.getElementById('rightHint').textContent='';
+  loadData();
+}
+
+// ── 테이블 상세 모달 ──
+function openModal(t){ openTableNo=t; renderModalBody(t); document.getElementById('tableModal').classList.add('show'); }
+function closeModal(){ openTableNo=null; document.getElementById('tableModal').classList.remove('show'); }
+function renderModalBody(t){
+  var mem=membersOf(t), chk=mem.filter(function(m){return m.checked_in;}).length;
+  document.getElementById('mtTitle').textContent=t+'번 테이블';
+  document.getElementById('mtSub').textContent='배정 '+mem.length+'/'+capacity+'명 · 체크인 '+chk+'명';
+  var body=document.getElementById('mtBody');
+  if(!mem.length){ body.innerHTML='<div class="m-empty">아직 배정된 참석자가 없습니다.<br>닫고 좌측에서 참석자를 선택해 이 테이블을 누르세요.</div>'; return; }
+  mem.sort(function(a,b){return (a.name||'').localeCompare(b.name||'','ko');});
+  body.innerHTML=mem.map(function(m){
+    var on=m.checked_in;
+    var meta=[m.org,digitsTail(m.phone)].filter(Boolean).join(' · ');
+    return '<div class="m-member"><div class="mm-left"><div class="mm-name">'+esc(m.name)+'</div><div class="mm-meta">'+esc(meta)+'</div></div>'
+      +'<button class="mm-chk-btn '+(on?'on':'off')+'" onclick="toggleCheck('+m.id+','+(on?'true':'false')+')">'+(on?'✓ 체크인':'체크인')+'</button>'
+      +'<button class="mm-remove" onclick="unassign('+m.id+')">빼기</button></div>';
+  }).join('');
+}
+async function toggleCheck(id,cur){
+  var patch=cur?{checked_in:false,checked_in_at:null}:{checked_in:true,checked_in_at:nowISO()};
+  var r=await sb.from('attendees').update(patch).eq('id',id);
+  if(r.error){showToast('오류: '+r.error.message,true);return;}
+  loadData();
+}
+async function unassign(id){
+  var a=attendees.find(function(x){return x.id===id;});
+  var r=await sb.from('attendees').update({table_no:''}).eq('id',id);
+  if(r.error){showToast('오류: '+r.error.message,true);return;}
+  showToast((a?a.name:'')+' 미배정으로 이동');
+  loadData();
+}
+
+// ── 도구 ──
+function setCapacity(){ var v=parseInt(document.getElementById('capInput').value);capacity=isNaN(v)||v<1?10:v;renderAll(); }
+function addTable(){
+  var t=prompt('추가할 테이블 번호를 입력하세요 (예: 1, 2, A)');
+  if(t===null) return;
+  t=String(t).trim(); if(!t) return;
+  if(customTables.indexOf(t)<0 && membersOf(t).length===0) customTables.push(t);
+  renderMap();
+}
+
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function showToast(m,e){var c=document.getElementById('toastContainer'),t=document.createElement('div');t.className='toast'+(e?' error':'');t.textContent=m;c.appendChild(t);setTimeout(function(){t.remove();},3000);}
+
+loadData();
+startRealtime();
+</script>
+</body>
+</html>
